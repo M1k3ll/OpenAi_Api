@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>چت با دستیار</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            background: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        #chat-box {
+            max-width: 600px;
+            margin: 50px auto;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            height: 500px;
+            overflow-y: auto;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .message {
+            margin: 10px 0;
+            padding: 10px 15px;
+            border-radius: 10px;
+            max-width: 80%;
+            line-height: 1.5;
+        }
+        .user {
+            background: #daf1ff;
+            align-self: flex-end;
+            text-align: right;
+            margin-right: auto;
+        }
+        .bot {
+            background: #eee;
+            align-self: flex-start;
+            text-align: left;
+            margin-left: auto;
+        }
+        #input-box {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        #message-input {
+            width: 70%;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            font-size: 16px;
+        }
+        #send-btn {
+            padding: 10px 20px;
+            margin-right: 10px;
+            border: none;
+            background: #007bff;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #send-btn:disabled {
+            background: #aaa;
+        }
+    </style>
+</head>
+<body>
+
+<div id="chat-box"></div>
+
+<div id="input-box">
+    <button id="send-btn">ارسال</button>
+    <input type="text" id="message-input" placeholder="بنویس و Enter بزن..." autofocus>
+</div>
+
+<script>
+    const chatBox = document.getElementById("chat-box");
+    const messageInput = document.getElementById("message-input");
+    const sendBtn = document.getElementById("send-btn");
+
+    function appendMessage(text, type) {
+        const div = document.createElement("div");
+        div.className = "message " + type;
+        div.innerText = text;
+        chatBox.appendChild(div);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    async function sendMessage() {
+        const msg = messageInput.value.trim();
+        if (!msg) return;
+        appendMessage(msg, "user");
+        messageInput.value = "";
+        sendBtn.disabled = true;
+        appendMessage("...در حال فکر کردن", "bot");
+
+        try {
+            const res = await fetch("/api/chat/", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({message: msg})
+            });
+            const data = await res.json();
+            // حذف پیام "در حال فکر کردن"
+            document.querySelectorAll(".bot").forEach(el => {
+                if (el.innerText === "...در حال فکر کردن") el.remove();
+            });
+            if (data.reply) {
+                appendMessage(data.reply, "bot");
+            } else {
+                appendMessage("❌ خطا در پاسخ", "bot");
+            }
+        } catch (e) {
+            appendMessage("❌ خطا در ارتباط با سرور", "bot");
+        } finally {
+            sendBtn.disabled = false;
+        }
+    }
+
+    sendBtn.onclick = sendMessage;
+    messageInput.addEventListener("keydown", e => {
+        if (e.key === "Enter") sendMessage();
+    });
+</script>
+
+</body>
+</html>
