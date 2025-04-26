@@ -64,6 +64,8 @@ from dotenv import load_dotenv
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from .models import ChatMessage
+
 
 load_dotenv()
 
@@ -82,8 +84,14 @@ def chat_view(request):
 
             if not user_message:
                 return JsonResponse({"error": "No message provided"}, status=400)
-
+            
+            # 👇 لود تاریخچه چت از دیتابیس
+            chat_history = [{"role": msg.role, "content": msg.content} for msg in ChatMessage.objects.order_by("timestamp")]
+            # 👇 اضافه کردن پیام جدید کاربر به تاریخچه
             chat_history.append({"role": "user", "content": user_message})
+            ChatMessage.objects.create(role="user", content=user_message)
+            # chat_history.append({"role": "user", "content": user_message})
+            # ChatMessage.objects.create(role="user", content=user_message)
 
             headers = {
                 "Authorization": f"Bearer {GROQ_API_KEY}",
@@ -98,7 +106,7 @@ def chat_view(request):
             groq_response = requests.post(GROQ_API_URL, headers=headers, json=payload)
 
             if groq_response.status_code != 200:
-                print("❌ خطا از سمت Groq:", groq_response.json())  # نمایش خطا در کنسول
+                print("❌ Error from Groq:", groq_response.json())  # نمایش خطا در کنسول
                 return JsonResponse({
                     "error": "Groq API Error",
                     "status": groq_response.status_code,
@@ -107,9 +115,12 @@ def chat_view(request):
 
             response_data = groq_response.json()
             ai_reply = response_data['choices'][0]['message']['content']
+
+            # 👇 ذخیره پیام مدل
+            ChatMessage.objects.create(role="assistant", content=ai_reply)
             
             # 👇 چاپ پاسخ در کنسول سرور
-            print("✅ پاسخ AI:", ai_reply)
+            print("✅ Answer AI:", ai_reply)
 
             chat_history.append({"role": "assistant", "content": ai_reply})
 
@@ -118,5 +129,6 @@ def chat_view(request):
         except Exception as e:
             print("❌ Exception:", str(e))  # نمایش خطا در کنسول
             return JsonResponse({"error": str(e)}, status=500)
-
-    return render(request, "chat.html")
+    chat_history = ChatMessage.objects.all().order_by("timestamp")
+    return render(request, "chat.html", {"chat_history": chat_history})
+    # return render(request, "chat.html")

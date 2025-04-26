@@ -5,69 +5,110 @@
     <title>چت با دستیار</title>
     <style>
         body {
-            font-family: sans-serif;
-            background: #f4f4f4;
-            margin: 0;
-            padding: 0;
+          font-family: 'Segoe UI', sans-serif;
+          background: #f7f7f8;
+          padding: 1rem;
         }
+      
         #chat-box {
-            max-width: 600px;
-            margin: 50px auto;
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            height: 500px;
-            overflow-y: auto;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+          background: white;
+          border-radius: 12px;
+          padding: 1rem;
+          max-height: 80vh;
+          overflow-y: auto;
+          box-shadow: 0 0 10px rgba(0,0,0,0.05);
         }
+      
         .message {
-            margin: 10px 0;
-            padding: 10px 15px;
-            border-radius: 10px;
-            max-width: 80%;
-            line-height: 1.5;
+          max-width: 100%;
+          padding: 0.75rem 1rem;
+          margin: 0.5rem 0;
+          border-radius: 12px;
+          line-height: 1.5;
+          white-space: pre-wrap;
         }
+      
         .user {
-            background: #daf1ff;
-            align-self: flex-end;
-            text-align: right;
-            margin-right: auto;
+          background-color: #dcfce7;
+          align-self: flex-end;
+          text-align: right;
+          margin-left: auto;
         }
-        .bot {
-            background: #eee;
+      
+        .assistant {
+            background-color: #f1f5f9;
             align-self: flex-start;
-            text-align: left;
-            margin-left: auto;
+            margin-right: auto;
+            text-align: left; /* این خط مهمه */
+            direction: ltr;    /* اگه متن انگلیسی هست */
+            }
+
+      
+        #chat-box {
+          display: flex;
+          flex-direction: column;
         }
-        #input-box {
-            display: flex;
-            justify-content: center;
-            margin-top: 20px;
+      
+        form {
+          margin-top: 1rem;
+          display: flex;
+          gap: 1rem;
         }
-        #message-input {
-            width: 70%;
-            padding: 10px;
-            border-radius: 5px;
-            border: 1px solid #ccc;
-            font-size: 16px;
+      
+        input[type="text"] {
+            flex-grow: 1;
+            padding: 1rem 1.25rem;
+            border-radius: 12px;
+            border: 1px solid #d1d5db;
+            font-size: 1.05rem;
+            line-height: 1.6;
+            background-color: #ffffff;
+            color: #111827;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            min-height: 3.75rem;
+            min-width: 500px;
+            transition: all 0.2s ease-in-out;
+            }
+
+            input[type="text"]:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+            }
+
+
+      
+        button {
+          padding: 0.75rem 1.25rem;
+          border: none;
+          border-radius: 8px;
+          background-color: #3b82f6;
+          color: white;
+          font-weight: bold;
+          cursor: pointer;
         }
-        #send-btn {
-            padding: 10px 20px;
-            margin-right: 10px;
-            border: none;
-            background: #007bff;
-            color: white;
-            border-radius: 5px;
-            cursor: pointer;
+      
+        button:hover {
+          background-color: #2563eb;
         }
-        #send-btn:disabled {
-            background: #aaa;
-        }
-    </style>
+      </style>
+      
 </head>
 <body>
+    <div id="chat-box">
+        {% for message in chat_history %}
+            <div class="message {{ message.role }}">
+            <strong>{{ message.role|title }}:</strong> {{ message.content }}
+            </div>
+        {% endfor %}
+        <br>
+        <br>
+        <br>
+        </div>
+        <br>
+        <br>
 
-<div id="chat-box"></div>
+<!-- <div id="chat-box"></div> -->
 
 <div id="input-box">
     <button id="send-btn">ارسال</button>
@@ -75,54 +116,84 @@
 </div>
 
 <script>
-    const chatBox = document.getElementById("chat-box");
-    const messageInput = document.getElementById("message-input");
-    const sendBtn = document.getElementById("send-btn");
-
-    function appendMessage(text, type) {
-        const div = document.createElement("div");
-        div.className = "message " + type;
-        div.innerText = text;
-        chatBox.appendChild(div);
-        chatBox.scrollTop = chatBox.scrollHeight;
-    }
-
-    async function sendMessage() {
-        const msg = messageInput.value.trim();
-        if (!msg) return;
-        appendMessage(msg, "user");
-        messageInput.value = "";
-        sendBtn.disabled = true;
-        appendMessage("...در حال فکر کردن", "bot");
-
-        try {
-            const res = await fetch("/api/chat/", {
-                method: "POST",
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({message: msg})
-            });
-            const data = await res.json();
-            // حذف پیام "در حال فکر کردن"
-            document.querySelectorAll(".bot").forEach(el => {
-                if (el.innerText === "...در حال فکر کردن") el.remove();
-            });
-            if (data.reply) {
-                appendMessage(data.reply, "bot");
-            } else {
-                appendMessage("❌ خطا در پاسخ", "bot");
-            }
-        } catch (e) {
-            appendMessage("❌ خطا در ارتباط با سرور", "bot");
-        } finally {
-            sendBtn.disabled = false;
-        }
-    }
-
-    sendBtn.onclick = sendMessage;
-    messageInput.addEventListener("keydown", e => {
-        if (e.key === "Enter") sendMessage();
+    const sendBtn = document.getElementById('send-btn');
+    const messageInput = document.getElementById('message-input');
+  
+    sendBtn.addEventListener('click', sendMessage);
+    messageInput.addEventListener('keypress', function (e) {
+      if (e.key === 'Enter') {
+        e.preventDefault(); // جلوگیری از رفرش شدن صفحه
+        sendMessage();
+      }
     });
-</script>
+  
+    function sendMessage() {
+      const message = messageInput.value.trim();
+      if (message === '') return;
+  
+      // نمایش پیام کاربر
+      const chatBox = document.getElementById('chat-box');
+      const userMsg = document.createElement('div');
+      userMsg.classList.add('message', 'user');
+      userMsg.textContent = message;
+      chatBox.appendChild(userMsg);
+  
+      // پاک کردن اینپوت
+      messageInput.value = '';
+  
+      // اسکرول به پایین
+      chatBox.scrollTop = chatBox.scrollHeight;
+
+    
+  
+      
+            fetch('/api/chat/', {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': getCookie('csrftoken')
+          },
+          body: JSON.stringify({ message: message })
+      })
+
+      .then(response => response.json())
+      .then(data => {
+        const assistantMsg = document.createElement('div');
+        assistantMsg.classList.add('message', 'assistant');
+        assistantMsg.textContent = data.reply;
+        chatBox.appendChild(assistantMsg);
+        chatBox.scrollTop = chatBox.scrollHeight;
+      });
+
+      
+
+    }
+  
+    // برای گرفتن CSRF از کوکی
+    function getCookie(name) {
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+          const cookie = cookies[i].trim();
+          if (cookie.substring(0, name.length + 1) === (name + '=')) {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
+          }
+        }
+      }
+      return cookieValue;
+    }
+    window.onload = function () {
+      const chatBox = document.getElementById('chat-box');
+      setTimeout(() => {
+        chatBox.scrollTop = chatBox.scrollHeight;
+      }, 100);
+    };
+  </script>
+  
+  
+
 
 </body>
 </html> 
