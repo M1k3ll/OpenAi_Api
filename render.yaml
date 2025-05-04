@@ -4,7 +4,8 @@ services:
     runtime: python
     buildCommand: |
       pip install -r requirements.txt
-      python manage.py migrate
+      python manage.py migrate --noinput
+      python manage.py collectstatic --noinput
     startCommand: gunicorn core.wsgi:application
     envVars:
       - key: DJANGO_SETTINGS_MODULE
